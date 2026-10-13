@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="en" class="dark h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PROTOCORD - Real-Time Cross-Device Chat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        discord: {
+                            darkest: '#1a1b1e',
+                            dark: '#222428',
+                            medium: '#2b2d31',
+                            light: '#383a40',
+                            accent: '#ff3b5c',
+                            accentHover: '#e02847',
+                            green: '#23a55a',
+                            yellow: '#f0b232',
+                            red: '#f23f43',
+                            textNormal: '#dbdee1',
+                            textMuted: '#949ba4',
+                            headerPrimary: '#f2f3f5'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #1a1b1e; color: #dbdee1; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #222428; }
+        ::-webkit-scrollbar-thumb { background: #111214; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #0b0b0c; }
+    </style>
+</head>
+<body class="bg-[#1a1b1e] text-[#dbdee1] h-full w-full overflow-hidden flex flex-col select-none">
+
+    <div id="mainAppContainer" class="flex h-full w-full overflow-hidden">
+        
+        <!-- Leftmost Server Column -->
+        <div class="w-18 bg-discord-darkest flex flex-col items-center py-3 space-y-2 flex-shrink-0 border-r border-black/20 z-10">
+            <!-- Custom Brand Logo -->
+            <div class="w-12 h-12 bg-gradient-to-tr from-discord-accent to-[#ff6b81] rounded-2xl flex items-center justify-center text-white text-xl font-bold shadow-lg shadow-discord-accent/20 cursor-pointer hover:rounded-xl transition-all duration-200 group">
+                <i class="fas fa-comment-dots transform group-hover:scale-110 transition-transform"></i>
+            </div>
+            <div class="w-8 h-[2px] bg-discord-light rounded my-1"></div>
+            
+            <!-- Server Icon List Container -->
+            <div id="serverIconList" class="flex flex-col space-y-2 items-center w-full overflow-y-auto flex-1">
+                <!-- Dynamically populated servers -->
+            </div>
+
+            <!-- Add / Join Server Plus Button at Bottom of Sidebar -->
+            <div class="pt-2 pb-1 w-full flex flex-col items-center border-t border-white/5">
+                <button onclick="window.openAddServerModal()" title="Add or Join Server" class="w-12 h-12 rounded-3xl bg-discord-medium hover:bg-discord-green text-discord-green hover:text-white flex items-center justify-center text-xl transition-all duration-200 hover:rounded-xl shadow-md border border-white/5 group">
+                    <i class="fas fa-plus text-sm group-hover:scale-125 transition-transform"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Channel Sidebar -->
+        <div class="w-60 bg-discord-dark flex flex-col flex-shrink-0 border-r border-black/10 hidden sm:flex">
+            <!-- Server Header -->
+            <div class="h-12 border-b border-black/20 px-3 flex items-center justify-between font-bold text-white shadow-sm">
+                <div class="flex flex-col min-w-0 pr-1">
+                    <span id="currentServerNameText" class="truncate text-sm">Select a Server</span>
+                    <span id="currentServerCodeText" onclick="window.copyServerCode()" title="Click to copy invite code" class="text-[10px] text-discord-accent hover:underline cursor-pointer truncate font-mono">Code: -----</span>
+                </div>
+                <i onclick="window.copyServerCode()" title="Copy Invite Code" class="fas fa-copy text-xs text-discord-textMuted hover:text-white cursor-pointer flex-shrink-0"></i>
+            </div>
+
+            <!-- Channels List -->
+            <div id="channelsListContainer" class="flex-1 overflow-y-auto p-2 space-y-1">
+                <div class="text-xs font-semibold text-discord-textMuted uppercase px-2 pt-2 pb-1 flex items-center justify-between">
+                    <span>Text Channels</span>
+                    <i onclick="window.promptCreateChannel()" class="fas fa-plus text-[10px] hover:text-white cursor-pointer" title="Create Channel"></i>
+                </div>
+                <div id="channelButtonsList">
+                    <!-- Dynamic channels -->
+                </div>
+            </div>
+
+            <!-- User Footer Box -->
+            <div class="h-14 bg-[#1e1f22] px-2 flex items-center justify-between">
+                <div class="flex items-center space-x-2 overflow-hidden">
+                    <div id="footerUserAvatar" class="w-8 h-8 rounded-full bg-discord-accent flex items-center justify-center text-white font-bold flex-shrink-0 overflow-hidden shadow">
+                        <i class="fas fa-user text-xs"></i>
+                    </div>
+                    <div class="flex flex-col min-w-0">
+                        <span id="displayUsernameText" class="text-xs font-semibold text-white truncate">Guest User</span>
+                        <span id="syncStatusBadge" class="text-[10px] text-discord-green flex items-center">
+                            <span class="w-1.5 h-1.5 bg-discord-green rounded-full inline-block mr-1"></span> Cloud Sync
+                        </span>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-1">
+                    <button onclick="window.promptEditProfile()" title="Edit Profile & Avatar" class="text-discord-textMuted hover:text-white p-1.5 rounded transition">
+                        <i class="fas fa-gear text-xs"></i>
+                    </button>
+                    <button onclick="window.handleLogout()" title="Log Out Account" class="text-discord-textMuted hover:text-discord-red p-1.5 rounded transition">
+                        <i class="fas fa-right-from-bracket text-xs"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat View Area -->
+        <div class="flex-1 flex flex-col bg-discord-medium min-w-0 h-full">
+            <!-- Channel Top Bar -->
+            <div class="h-12 border-b border-black/20 px-4 flex items-center justify-between shadow-sm flex-shrink-0 bg-discord-medium">
+                <div class="flex items-center space-x-2 min-w-0">
+                    <i class="fas fa-hashtag text-discord-textMuted text-lg"></i>
+                    <span id="currentChannelTitle" class="font-bold text-white truncate">#select-server</span>
+                    <span class="text-discord-light hidden md:inline">|</span>
+                    <span id="currentChannelDesc" class="text-xs text-discord-textMuted truncate hidden md:inline">Join a server to start chatting</span>
+                </div>
+                <div class="flex items-center space-x-3 text-discord-textMuted text-sm">
+                    <button onclick="window.promptEditProfile()" class="sm:hidden text-discord-accent font-semibold text-xs flex items-center space-x-1 border border-discord-accent/40 px-2 py-1 rounded bg-discord-accent/10">
+                        <i class="fas fa-user-pen"></i>
+                        <span>Profile</span>
+                    </button>
+                    <button onclick="window.handleLogout()" class="sm:hidden text-discord-red font-semibold text-xs flex items-center space-x-1 border border-discord-red/40 px-2 py-1 rounded bg-discord-red/10">
+                        <i class="fas fa-right-from-bracket"></i>
+                        <span>Log Out</span>
+                    </button>
+                    <i class="fas fa-bell hover:text-white cursor-pointer hidden sm:inline"></i>
+                    <i class="fas fa-users hover:text-white cursor-pointer hidden sm:inline"></i>
+                </div>
+            </div>
+
+            <!-- Messages List Scroll Area -->
+            <div id="messagesContainer" class="flex-1 overflow-y-auto p-4 space-y-3">
+                <div class="text-center text-discord-textMuted py-8">
+                    <i class="fas fa-circle-notch fa-spin text-2xl mb-2 text-discord-accent"></i>
+                    <p class="text-sm">Connecting to cloud feed...</p>
+                </div>
+            </div>
+
+            <!-- Chat Input Footer -->
+            <div class="p-4 flex-shrink-0 bg-discord-medium">
+                <div class="bg-discord-light/60 rounded-lg px-4 py-2.5 flex items-center space-x-3 shadow-inner border border-white/5 focus-within:border-discord-accent/50 transition">
+                    <button class="text-discord-textMuted hover:text-white flex-shrink-0">
+                        <i class="fas fa-circle-plus text-lg"></i>
+                    </button>
+                    <input id="chatInput" type="text" placeholder="Message channel..." class="bg-transparent border-none outline-none text-white w-full text-sm placeholder-discord-textMuted">
+                    <button onclick="window.handleSendBtn()" class="bg-discord-accent hover:bg-discord-accentHover text-white p-2 rounded-md flex-shrink-0 transition flex items-center justify-center w-8 h-8 shadow-md shadow-discord-accent/20">
+                        <i class="fas fa-paper-plane text-xs"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Authentication Modal (Sign Up / Log In with Password) -->
+    <div id="profileModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-discord-dark w-full max-w-md rounded-2xl p-6 shadow-2xl border border-discord-light/40 text-center relative overflow-hidden">
+            
+            <div class="w-14 h-14 bg-gradient-to-tr from-discord-accent to-[#ff6b81] rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-lg mx-auto mb-3">
+                <i class="fas fa-shield-halved"></i>
+            </div>
+            
+            <!-- Auth Navigation Tabs -->
+            <div class="flex rounded-lg bg-discord-darkest p-1 mb-5 border border-white/5">
+                <button id="tabSignupBtn" onclick="window.switchAuthTab('signup')" class="flex-1 py-1.5 text-xs font-semibold rounded-md text-white bg-discord-accent transition">
+                    Create Account
+                </button>
+                <button id="tabLoginBtn" onclick="window.switchAuthTab('login')" class="flex-1 py-1.5 text-xs font-semibold rounded-md text-discord-textMuted hover:text-white transition">
+                    Log In
+                </button>
+            </div>
+
+            <!-- Error Notification Banner -->
+            <div id="authErrorBox" class="hidden mb-4 p-2.5 bg-discord-red/20 border border-discord-red/50 text-discord-red text-xs rounded-lg text-left">
+                <i class="fas fa-circle-exclamation mr-1"></i> <span id="authErrorMsg">Error message here</span>
+            </div>
+
+            <!-- SIGN UP FORM -->
+            <form id="signupForm" onsubmit="window.handleSignup(event)" class="space-y-3">
+                <!-- Avatar Upload Selector -->
+                <div class="flex flex-col items-center justify-center mb-1">
+                    <label for="avatarFileInput" class="relative group cursor-pointer">
+                        <div id="avatarPreviewBox" class="w-16 h-16 rounded-full bg-discord-light flex items-center justify-center border-2 border-dashed border-discord-accent group-hover:border-white overflow-hidden transition relative shadow-inner">
+                            <i id="avatarPreviewIcon" class="fas fa-camera text-lg text-discord-textMuted group-hover:text-white"></i>
+                            <img id="avatarPreviewImg" class="w-full h-full object-cover hidden" />
+                        </div>
+                        <div class="absolute bottom-0 right-0 bg-discord-accent text-white p-1 rounded-full text-[10px] shadow-md">
+                            <i class="fas fa-plus"></i>
+                        </div>
+                    </label>
+                    <input id="avatarFileInput" type="file" accept="image/*" onchange="window.handleAvatarSelect(event)" class="hidden" />
+                    <span class="text-[10px] text-discord-textMuted mt-1">Tap circle for profile photo</span>
+                </div>
+
+                <div class="text-left">
+                    <label class="text-[11px] font-bold text-discord-textMuted uppercase mb-1 block">Username</label>
+                    <input id="signupUsernameInput" type="text" required placeholder="e.g. seissiete" class="w-full bg-discord-darkest border border-black/40 rounded-lg p-2 text-white outline-none focus:border-discord-accent text-sm">
+                </div>
+
+                <div class="text-left">
+                    <label class="text-[11px] font-bold text-discord-textMuted uppercase mb-1 block">Password</label>
+                    <input id="signupPasswordInput" type="password" required placeholder="Choose a secure password" class="w-full bg-discord-darkest border border-black/40 rounded-lg p-2 text-white outline-none focus:border-discord-accent text-sm">
+                </div>
+
+                <button type="submit" id="signupSubmitBtn" class="w-full bg-discord-accent hover:bg-discord-accentHover text-white font-semibold py-2.5 rounded-lg transition shadow-lg shadow-discord-accent/20 text-sm flex items-center justify-center space-x-2 mt-2">
+                    <i class="fas fa-user-plus"></i>
+                    <span>Create Account & Continue</span>
+                </button>
+            </form>
+
+            <!-- LOG IN FORM -->
+            <form id="loginForm" onsubmit="window.handleLogin(event)" class="space-y-3 hidden">
+                <div class="text-left">
+                    <label class="text-[11px] font-bold text-discord-textMuted uppercase mb-1 block">Username</label>
+                    <input id="loginUsernameInput" type="text" required placeholder="Your username" class="w-full bg-discord-darkest border border-black/40 rounded-lg p-2 text-white outline-none focus:border-discord-accent text-sm">
+                </div>
+
+                <div class="text-left">
+                    <label class="text-[11px] font-bold text-discord-textMuted uppercase mb-1 block">Password</label>
+                    <input id="loginPasswordInput" type="password" required placeholder="Your password" class="w-full bg-discord-darkest border border-black/40 rounded-lg p-2 text-white outline-none focus:border-discord-accent text-sm">
+                </div>
+
+                <button type="submit" id="loginSubmitBtn" class="w-full bg-discord-accent hover:bg-discord-accentHover text-white font-semibold py-2.5 rounded-lg transition shadow-lg shadow-discord-accent/20 text-sm flex items-center justify-center space-x-2 mt-2">
+                    <i class="fas fa-right-to-bracket"></i>
+                    <span>Log In to Account</span>
+                </button>
+            </form>
+
+            <button id="cancelProfileBtn" onclick="window.hideProfileModal()" class="mt-3 text-xs text-discord-textMuted hover:text-white underline hidden mx-auto">
+                Cancel
+            </button>
+        </div>
+    </div>
+
+    <!-- Server Onboarding / Join Modal ("Initiate your yapping protocol") -->
+    <div id="serverOnboardModal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-discord-dark w-full max-w-lg rounded-2xl p-6 shadow-2xl border border-discord-light/40 text-center relative overflow-hidden">
+            <div class="w-16 h-16 bg-gradient-to-tr from-discord-accent to-[#ff6b81] rounded-2xl flex items-center justify-center text-white text-3xl font-bold shadow-lg mx-auto mb-4">
+                <i class="fas fa-comments"></i>
+            </div>
+            <h2 class="text-xl font-bold text-white mb-2">Initiate your yapping protocol by joining a server below!</h2>
+            <p class="text-xs text-discord-textMuted mb-6">Connect with friends, chat in real-time, or create your own community server.</p>
+
+            <div id="onboardServerList" class="space-y-2 max-h-60 overflow-y-auto mb-6 text-left p-2 bg-discord-darkest rounded-xl border border-white/5">
+                <!-- Dynamically populated discoverable servers -->
+            </div>
+
+            <div class="flex space-x-3">
+                <button onclick="window.openAddServerModal()" class="flex-1 bg-discord-light hover:bg-discord-light/80 text-white font-semibold py-2.5 rounded-lg transition text-sm">
+                    <i class="fas fa-plus mr-1"></i> Add / Join Code
+                </button>
+                <button onclick="window.joinSelectedServer()" class="flex-1 bg-discord-accent hover:bg-discord-accentHover text-white font-semibold py-2.5 rounded-lg transition text-sm shadow-lg shadow-discord-accent/20">
+                    <i class="fas fa-arrow-right mr-1"></i> Continue
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Server Hub Modal (Choice between Create or Join by Code) -->
+    <div id="addServerHubModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-discord-dark w-full max-w-md rounded-2xl p-6 shadow-2xl border border-discord-light/40 text-center relative">
+            <button onclick="window.closeAddServerHubModal()" class="absolute top-4 right-4 text-discord-textMuted hover:text-white">
+                <i class="fas fa-xmark text-lg"></i>
+            </button>
+            
+            <h3 class="text-xl font-bold text-white mb-1">Add a Server</h3>
+            <p class="text-xs text-discord-textMuted mb-5">Create a customized space for your squad or join an existing server with an invite code.</p>
+
+            <!-- Dual Tab Selector -->
+            <div class="flex rounded-lg bg-discord-darkest p-1 mb-5 border border-white/5">
+                <button id="tabCreateSrvBtn" onclick="window.switchAddServerTab('create')" class="flex-1 py-2 text-xs font-semibold rounded-md text-white bg-discord-accent transition">
+                    Create My Own
+                </button>
+                <button id="tabJoinSrvBtn" onclick="window.switchAddServerTab('join')" class="flex-1 py-2 text-xs font-semibold rounded-md text-discord-textMuted hover:text-white transition">
+                    Join with Code
+                </button>
+            </div>
+
+            <!-- CREATE SERVER SECTION -->
+            <div id="createServerSection" class="space-y-4 text-left">
+                <div>
+                    <label class="text-[11px] font-bold text-discord-textMuted uppercase mb-1 block">Server Name</label>
+                    <input id="newServerNameInput" type="text" placeholder="e.g. Chill Hangout" class="w-full bg-discord-darkest border border-black/40 rounded-lg p-2.5 text-white outline-none focus:border-discord-accent text-sm">
+                </div>
+
+                <!-- Customization: Icon / Color / Symbol -->
+                <div>
+                    <label class="text-[11px] font-bold text-discord-textMuted uppercase mb-1 block">Server Icon Customization</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <!-- Icon Symbol Pick -->
+                        <div class="space-y-1">
+                            <span class="text-[10px] text-discord-textMuted">Symbol</span>
+                            <select id="newServerIconSelect" class="w-full bg-discord-darkest border border-black/40 rounded-lg p-2 text-white outline-none text-xs">
+                                <option value="fa-gamepad">🎮 Gamepad</option>
+                                <option value="fa-headset">🎧 Gaming</option>
+                                <option value="fa-fire">🔥 Fire</option>
+                                <option value="fa-rocket">🚀 Rocket</option>
+                                <option value="fa-ghost">👻 Ghost</option>
+                                <option value="fa-crown">👑 Crown</option>
+                                <option value="fa-bolt">⚡ Lightning</option>
+                                <option value="fa-heart">❤️ Heart</option>
+                            </select>
+                        </div>
+                        <!-- Color Pick -->
+                        <div class="space-y-1">
+                            <span class="text-[10px] text-discord-textMuted">Color Theme</span>
+                            <select id="newServerColorSelect" class="w-full bg-discord-darkest border border-black/40 rounded-lg p-2 text-white outline-none text-xs">
+                                <option value="bg-discord-accent">Red Accent</option>
+                                <option value="bg-discord-green">Green</option>
+                                <option value="bg-discord-yellow">Yellow</option>
+                                <option value="bg-indigo-600">Indigo</option>
+                                <option value="bg-purple-600">Purple</option>
+                                <option value="bg-pink-600">Pink</option>
+                                <option value="bg-blue-600">Blue</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="window.submitCreateServer()" class="w-full bg-discord-accent hover:bg-discord-accentHover text-white py-2.5 rounded-lg text-sm font-semibold transition shadow-md shadow-discord-accent/20 flex items-center justify-center space-x-2">
+                    <i class="fas fa-wand-magic-sparkles"></i>
+                    <span>Create Server & Generate Code</span>
+                </button>
+            </div>
+
+            <!-- JOIN SERVER BY CODE SECTION -->
+            <div id="joinServerSection" class="space-y-4 text-left hidden">
+                <div>
+                    <label class="text-[11px] font-bold text-discord-textMuted uppercase mb-1 block">Invite Code</label>
+                    <input id="joinServerCodeInput" type="text" placeholder="e.g. 8X9A2B1C" class="w-full bg-discord-darkest border border-black/40 rounded-lg p-2.5 text-white uppercase outline-none focus:border-discord-accent text-sm font-mono tracking-widest">
+                    <p class="text-[10px] text-discord-textMuted mt-1">Enter an 8-character server invite code provided by a server owner.</p>
+                </div>
+
+                <button onclick="window.submitJoinServerByCode()" class="w-full bg-discord-green hover:bg-emerald-600 text-white py-2.5 rounded-lg text-sm font-semibold transition shadow-md shadow-discord-green/20 flex items-center justify-center space-x-2">
+                    <i class="fas fa-right-to-bracket"></i>
+                    <span>Join Server via Code</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Box for copied invite codes -->
+    <div id="toastBox" class="fixed bottom-5 right-5 bg-discord-accent text-white px-4 py-2.5 rounded-xl shadow-2xl text-xs font-semibold flex items-center space-x-2 transition-all duration-300 opacity-0 pointer-events-none transform translate-y-2 z-50">
+        <i class="fas fa-check-circle"></i>
+        <span id="toastMsg">Action completed!</span>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, doc, setDoc, getDoc, query, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        window.appId = typeof appId !== 'undefined' ? appId : 'protocord_default';
+
+        window.firebaseApp = null;
+        window.db = null;
+        window.auth = null;
+        window.currentUser = null;
+        window.currentUsername = '';
+        window.currentUserAvatar = '';
+        window.pendingAvatarBase64 = '';
+        window.currentServerId = null;
+        window.currentChannel = 'general';
+        window.activeAuthTab = 'signup';
+        window.userServers = [];
+        window.discoverableServers = [];
+        window.unsubscribeMessages = null;
+
+        function getAppId() {
+            return window.appId || 'protocord_default';
+        }
+
+        function generateInviteCode() {
+            return Math.random().toString(36).substring(2, 10).toUpperCase();
+        }
+
+        window.showToast = function(msg) {
+            const toast = document.getElementById('toastBox');
+            const toastMsg = document.getElementById('toastMsg');
+            if (!toast || !toastMsg) return;
+            toastMsg.innerText = msg;
+            toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-2');
+            toast.classList.add('opacity-100', 'translate-y-0');
+            setTimeout(() => {
+                toast.classList.remove('opacity-100', 'translate-y-0');
+                toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-2');
+            }, 3000);
+        };
+
+        window.renderServerIcons = function() {
+            const container = document.getElementById('serverIconList');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const serversToDisplay = window.discoverableServers.filter(s => window.userServers.includes(s.id));
+
+            serversToDisplay.forEach(srv => {
+                const isActive = srv.id === window.currentServerId;
+                const btn = document.createElement('div');
+                btn.className = `relative group flex items-center justify-center w-12 h-12 rounded-3xl hover:rounded-xl cursor-pointer transition-all duration-200 ${srv.color || 'bg-discord-accent'} ${isActive ? '!rounded-xl border-2 border-white' : 'opacity-80 hover:opacity-100'}`;
+                btn.onclick = () => window.selectServer(srv.id);
+                btn.title = srv.name;
+
+                btn.innerHTML = `
+                    <i class="fas ${srv.icon || 'fa-comments'} text-white text-lg"></i>
+                    <div class="absolute left-0 w-1 bg-white rounded-r transition-all duration-200 ${isActive ? 'h-8' : 'h-0 group-hover:h-4'}"></div>
+                `;
+                container.appendChild(btn);
+            });
+        };
+
+        window.renderChannelsList = function(channels) {
+            const container = document.getElementById('channelButtonsList');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const list = channels && channels.length > 0 ? channels : ['general', 'lounge'];
+
+            list.forEach(chan => {
+                const isActive = chan === window.currentChannel;
+                const btn = document.createElement('button');
+                btn.className = `w-full flex items-center space-x-2 px-2 py-1.5 rounded text-xs font-semibold transition ${isActive ? 'bg-discord-light text-white' : 'text-discord-textMuted hover:text-white hover:bg-discord-light/40'}`;
+                btn.onclick = () => window.changeChannel(chan);
+                btn.innerHTML = `
+                    <i class="fas fa-hashtag text-xs ${isActive ? 'text-white' : 'text-discord-textMuted'}"></i>
+                    <span class="truncate">${chan}</span>
+                `;
+                container.appendChild(btn);
+            });
+        };
+
+        window.renderMessages = function(msgs) {
+            const container = document.getElementById('messagesContainer');
+            if (!container) return;
+
+            if (!msgs || msgs.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-discord-textMuted py-12 space-y-2">
+                        <i class="fas fa-comments text-4xl text-discord-light"></i>
+                        <p class="text-sm">Welcome to #${window.currentChannel}! Start the conversation.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = '';
+            msgs.forEach(m => {
+                const timeStr = m.timestamp ? new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                const msgEl = document.createElement('div');
+                msgEl.className = 'flex items-start space-x-3 hover:bg-black/10 p-1.5 rounded-lg transition group';
+                
+                const avatarHtml = m.avatar 
+                    ? `<img src="${m.avatar}" class="w-10 h-10 rounded-full object-cover shadow flex-shrink-0" />`
+                    : `<div class="w-10 h-10 rounded-full bg-discord-accent flex items-center justify-center text-white font-bold flex-shrink-0 shadow"><i class="fas fa-user text-sm"></i></div>`;
+
+                msgEl.innerHTML = `
+                    ${avatarHtml}
+                    <div class="flex flex-col min-w-0 flex-1">
+                        <div class="flex items-center space-x-2">
+                            <span class="font-semibold text-sm text-white hover:underline cursor-pointer">${m.username || 'Guest'}</span>
+                            <span class="text-[10px] text-discord-textMuted">${timeStr}</span>
+                        </div>
+                        <p class="text-sm text-discord-textNormal break-words mt-0.5">${m.text || ''}</p>
+                    </div>
+                `;
+                container.appendChild(msgEl);
+            });
+
+            container.scrollTop = container.scrollHeight;
+        };
+
+        window.submitCreateServer = function() {
+            const input = document.getElementById('newServerNameInput');
+            const iconSelect = document.getElementById('newServerIconSelect');
+            const colorSelect = document.getElementById('newServerColorSelect');
+
+            if (!input || !input.value.trim()) {
+                window.showToast("Please enter a server name!");
+                return;
+            }
+
+            const serverName = input.value.trim();
+            const icon = iconSelect ? iconSelect.value : 'fa-gamepad';
+            const color = colorSelect ? colorSelect.value : 'bg-discord-accent';
+            const serverCode = generateInviteCode();
+            const serverId = 'srv_' + Math.random().toString(36).substring(2, 8);
+
+            input.value = '';
+            window.closeAddServerHubModal();
+
+            const newServer = {
+                id: serverId,
+                name: serverName,
+                code: serverCode,
+                icon: icon,
+                color: color,
+                owner: window.currentUsername || 'Guest',
+                channels: ['general', 'lounge'],
+                createdAt: Date.now()
+            };
+
+            // Update local state immediately
+            window.discoverableServers.push(newServer);
+            if (!window.userServers.includes(serverId)) {
+                window.userServers.push(serverId);
+            }
+
+            window.renderServerIcons();
+            window.selectServer(serverId);
+            window.showToast(`Server Created! Invite Code: ${serverCode}`);
+
+            // Background async save to Cloud Firestore
+            if (window.db) {
+                setDoc(doc(window.db, 'artifacts', getAppId(), 'public', 'data', 'servers', serverId), newServer)
+                    .catch(e => console.warn("Background server save error:", e));
+            }
+
+            updateCloudUserServers();
+        };
+
+        window.submitJoinServerByCode = async function() {
+            const codeInput = document.getElementById('joinServerCodeInput');
+            if (!codeInput || !codeInput.value.trim()) return;
+
+            const code = codeInput.value.trim().toUpperCase();
+            codeInput.value = '';
+
+            let foundServer = window.discoverableServers.find(s => (s.code || '').toUpperCase() === code || s.id.toUpperCase() === code);
+
+            if (!foundServer && window.db) {
+                try {
+                    const q = query(collection(window.db, 'artifacts', getAppId(), 'public', 'data', 'servers'));
+                    const snap = await getDocs(q);
+                    snap.forEach(docSnap => {
+                        const data = docSnap.data();
+                        if ((data.code && data.code.toUpperCase() === code) || docSnap.id.toUpperCase() === code) {
+                            foundServer = { id: docSnap.id, ...data };
+                        }
+                    });
+                } catch(e) {
+                    console.warn("Cloud server search error:", e);
+                }
+            }
+
+            if (!foundServer) {
+                window.showToast("Invalid Invite Code! Please check and try again.");
+                return;
+            }
+
+            window.closeAddServerHubModal();
+
+            if (!window.userServers.includes(foundServer.id)) {
+                window.userServers.push(foundServer.id);
+                updateCloudUserServers();
+            }
+
+            if (!window.discoverableServers.some(s => s.id === foundServer.id)) {
+                window.discoverableServers.push(foundServer);
+            }
+
+            window.renderServerIcons();
+            window.selectServer(foundServer.id);
+            window.showToast(`Successfully joined ${foundServer.name}!`);
+        };
+
+        window.updateUserUI = function() {
+            const nameEl = document.getElementById('displayUsernameText');
+            const avatarBox = document.getElementById('footerUserAvatar');
+
+            if (nameEl) nameEl.innerText = window.currentUsername || 'Guest User';
+            if (avatarBox) {
+                if (window.currentUserAvatar) {
+                    avatarBox.innerHTML = `<img src="${window.currentUserAvatar}" class="w-full h-full object-cover" />`;
+                } else {
+                    avatarBox.innerHTML = `<i class="fas fa-user text-xs"></i>`;
+                }
+            }
+        };
+
+        window.selectServer = function(serverId) {
+            window.currentServerId = serverId;
+            const server = window.discoverableServers.find(s => s.id === serverId);
+
+            if (server) {
+                const nameText = document.getElementById('currentServerNameText');
+                const codeText = document.getElementById('currentServerCodeText');
+                if (nameText) nameText.innerText = server.name;
+                if (codeText) codeText.innerText = `Code: ${server.code || '-----'}`;
+
+                const channels = server.channels || ['general', 'lounge'];
+                window.renderChannelsList(channels);
+                window.changeChannel(channels[0] || 'general');
+            }
+
+            window.renderServerIcons();
+        };
+
+        window.changeChannel = function(channel) {
+            window.currentChannel = channel;
+            const titleEl = document.getElementById('currentChannelTitle');
+            if (titleEl) titleEl.innerText = `#${channel}`;
+
+            if (window.unsubscribeMessages) {
+                window.unsubscribeMessages();
+                window.unsubscribeMessages = null;
+            }
+
+            window.renderChannelsList(window.discoverableServers.find(s => s.id === window.currentServerId)?.channels || ['general', 'lounge']);
+            subscribeToChannel(window.currentServerId, channel);
+        };
+
+        window.switchAuthTab = function(tab) {
+            window.activeAuthTab = tab;
+            const signupBtn = document.getElementById('tabSignupBtn');
+            const loginBtn = document.getElementById('tabLoginBtn');
+            const signupForm = document.getElementById('signupForm');
+            const loginForm = document.getElementById('loginForm');
+            const errBox = document.getElementById('authErrorBox');
+
+            if (errBox) errBox.classList.add('hidden');
+
+            if (tab === 'signup') {
+                signupBtn.className = "flex-1 py-1.5 text-xs font-semibold rounded-md text-white bg-discord-accent transition";
+                loginBtn.className = "flex-1 py-1.5 text-xs font-semibold rounded-md text-discord-textMuted hover:text-white transition";
+                signupForm.classList.remove('hidden');
+                loginForm.classList.add('hidden');
+            } else {
+                loginBtn.className = "flex-1 py-1.5 text-xs font-semibold rounded-md text-white bg-discord-accent transition";
+                signupBtn.className = "flex-1 py-1.5 text-xs font-semibold rounded-md text-discord-textMuted hover:text-white transition";
+                loginForm.classList.remove('hidden');
+                signupForm.classList.add('hidden');
+            }
+        };
+
+        function showAuthError(msg) {
+            const errBox = document.getElementById('authErrorBox');
+            const errMsg = document.getElementById('authErrorMsg');
+            if (errBox && errMsg) {
+                errMsg.innerText = msg;
+                errBox.classList.remove('hidden');
+            }
+        }
+
+        window.handleAvatarSelect = function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                window.pendingAvatarBase64 = event.target.result;
+                const img = document.getElementById('avatarPreviewImg');
+                const icon = document.getElementById('avatarPreviewIcon');
+                if (img) {
+                    img.src = window.pendingAvatarBase64;
+                    img.classList.remove('hidden');
+                }
+                if (icon) icon.classList.add('hidden');
+            };
+            reader.readAsDataURL(file);
+        };
+
+        window.promptEditProfile = function(canCancel = true) {
+            const modal = document.getElementById('profileModal');
+            const cancelBtn = document.getElementById('cancelProfileBtn');
+            if (modal) modal.classList.remove('hidden');
+            if (cancelBtn) {
+                if (canCancel) cancelBtn.classList.remove('hidden');
+                else cancelBtn.classList.add('hidden');
+            }
+        };
+
+        window.hideProfileModal = function() {
+            const modal = document.getElementById('profileModal');
+            if (modal) modal.classList.add('hidden');
+        };
+
+        window.handleLogout = function() {
+            localStorage.removeItem('protocord_saved_profile');
+            window.currentUsername = '';
+            window.currentUserAvatar = '';
+            window.pendingAvatarBase64 = '';
+            updateUserUI();
+            window.promptEditProfile(false);
+            window.showToast("Logged out successfully.");
+        };
+
+        window.copyServerCode = function() {
+            const server = window.discoverableServers.find(s => s.id === window.currentServerId);
+            if (!server) return;
+            const code = server.code || server.id;
+
+            const tempInput = document.createElement('input');
+            tempInput.value = code;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+
+            window.showToast(`Copied Server Code: ${code}`);
+        };
+
+        window.openAddServerModal = function() {
+            const modal = document.getElementById('addServerHubModal');
+            if (modal) modal.classList.remove('hidden');
+        };
+
+        window.closeAddServerHubModal = function() {
+            const modal = document.getElementById('addServerHubModal');
+            if (modal) modal.classList.add('hidden');
+        };
+
+        window.switchAddServerTab = function(tab) {
+            const createBtn = document.getElementById('tabCreateSrvBtn');
+            const joinBtn = document.getElementById('tabJoinSrvBtn');
+            const createSec = document.getElementById('createServerSection');
+            const joinSec = document.getElementById('joinServerSection');
+
+            if (tab === 'create') {
+                createBtn.className = "flex-1 py-2 text-xs font-semibold rounded-md text-white bg-discord-accent transition";
+                joinBtn.className = "flex-1 py-2 text-xs font-semibold rounded-md text-discord-textMuted hover:text-white transition";
+                createSec.classList.remove('hidden');
+                joinSec.classList.add('hidden');
+            } else {
+                joinBtn.className = "flex-1 py-2 text-xs font-semibold rounded-md text-white bg-discord-accent transition";
+                createBtn.className = "flex-1 py-2 text-xs font-semibold rounded-md text-discord-textMuted hover:text-white transition";
+                joinSec.classList.remove('hidden');
+                createSec.classList.add('hidden');
+            }
+        };
+
+        window.promptJoinServerOnboard = function() {
+            const modal = document.getElementById('serverOnboardModal');
+            const listContainer = document.getElementById('onboardServerList');
+            if (!modal || !listContainer) return;
+
+            listContainer.innerHTML = '';
+            window.discoverableServers.forEach(srv => {
+                const item = document.createElement('div');
+                item.className = "flex items-center justify-between p-2 hover:bg-white/5 rounded-lg cursor-pointer transition";
+                item.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 ${srv.color || 'bg-discord-accent'} rounded-xl flex items-center justify-center text-white">
+                            <i class="fas ${srv.icon || 'fa-comments'}"></i>
+                        </div>
+                        <div>
+                            <div class="text-sm font-semibold text-white">${srv.name}</div>
+                            <div class="text-[10px] text-discord-textMuted font-mono">Code: ${srv.code || '---'}</div>
+                        </div>
+                    </div>
+                    <button onclick="window.joinServerDirect('${srv.id}')" class="bg-discord-accent hover:bg-discord-accentHover text-white px-3 py-1 rounded text-xs transition">
+                        Join
+                    </button>
+                `;
+                listContainer.appendChild(item);
+            });
+
+            modal.classList.remove('hidden');
+        };
+
+        window.joinServerDirect = function(serverId) {
+            if (!window.userServers.includes(serverId)) {
+                window.userServers.push(serverId);
+                updateCloudUserServers();
+            }
+            window.renderServerIcons();
+            window.selectServer(serverId);
+            const modal = document.getElementById('serverOnboardModal');
+            if (modal) modal.classList.add('hidden');
+        };
+
+        window.joinSelectedServer = function() {
+            if (window.userServers.length === 0 && window.discoverableServers.length > 0) {
+                window.userServers.push(window.discoverableServers[0].id);
+            }
+            const modal = document.getElementById('serverOnboardModal');
+            if (modal) modal.classList.add('hidden');
+            window.renderServerIcons();
+            if (window.userServers.length > 0) {
+                window.selectServer(window.userServers[0]);
+            }
+        };
+
+        window.promptCreateChannel = function() {
+            const chanName = prompt("Enter new channel name:");
+            if (!chanName || !chanName.trim() || !window.currentServerId) return;
+
+            const cleanName = chanName.trim().toLowerCase().replace(/[^a-z0-9\-]/g, '-');
+            const srv = window.discoverableServers.find(s => s.id === window.currentServerId);
+            if (srv) {
+                if (!srv.channels) srv.channels = ['general', 'lounge'];
+                if (!srv.channels.includes(cleanName)) {
+                    srv.channels.push(cleanName);
+                    if (window.db) {
+                        setDoc(doc(window.db, 'artifacts', getAppId(), 'public', 'data', 'servers', srv.id), { channels: srv.channels }, { merge: true }).catch(console.error);
+                    }
+                    window.renderChannelsList(srv.channels);
+                    window.changeChannel(cleanName);
+                }
+            }
+        };
+
+        window.handleSendBtn = function() {
+            const input = document.getElementById('chatInput');
+            if (!input || !input.value.trim()) return;
+            const text = input.value.trim();
+            input.value = '';
+            window.sendMessage(text);
+        };
+
+        function loadDefaultServers() {
+            const defaultServer = {
+                id: 'test_server',
+                name: 'Test Server',
+                code: 'TESTSRVR',
+                owner: 'System',
+                icon: 'fa-comments',
+                color: 'bg-discord-accent',
+                channels: ['general', 'lounge'],
+                createdAt: Date.now()
+            };
+
+            window.discoverableServers = [defaultServer];
+            if (!window.userServers || window.userServers.length === 0) {
+                window.userServers = ['test_server'];
+            }
+            window.renderServerIcons();
+            if (window.userServers.length > 0) {
+                window.selectServer(window.userServers[0]);
+            }
+        }
+
+        async function loadUserServers() {
+            if (!window.db) return;
+            try {
+                let querySnapshot;
+                try {
+                    const q = query(collection(window.db, 'artifacts', getAppId(), 'public', 'data', 'servers'));
+                    querySnapshot = await getDocs(q);
+                } catch(netErr) {
+                    console.warn("Network fetch warning, switching to fallback:", netErr);
+                    loadDefaultServers();
+                    return;
+                }
+
+                window.discoverableServers = [];
+                if (querySnapshot) {
+                    querySnapshot.forEach(docSnap => {
+                        const data = docSnap.data();
+                        window.discoverableServers.push({ 
+                            id: docSnap.id, 
+                            code: data.code || docSnap.id.substring(0,8).toUpperCase(),
+                            icon: data.icon || 'fa-comments',
+                            color: data.color || 'bg-discord-accent',
+                            ...data 
+                        });
+                    });
+                }
+
+                if (window.currentUsername) {
+                    const cleanUserKey = window.currentUsername.toLowerCase().replace(/[^a-z0-9_]/g, '');
+                    const userRef = doc(window.db, 'artifacts', getAppId(), 'public', 'data', 'registered_users', cleanUserKey);
+                    
+                    try {
+                        const userSnap = await getDoc(userRef);
+                        if (userSnap.exists() && userSnap.data().servers && userSnap.data().servers.length > 0) {
+                            window.userServers = userSnap.data().servers;
+                        } else {
+                            window.userServers = ['test_server'];
+                            await updateCloudUserServers();
+                        }
+                    } catch(uErr) {
+                        console.warn("User profile fetch offline fallback:", uErr);
+                        if (!window.userServers || window.userServers.length === 0) {
+                            window.userServers = ['test_server'];
+                        }
+                    }
+                } else {
+                    window.userServers = ['test_server'];
+                }
+
+                window.renderServerIcons();
+
+                if (window.userServers.length > 0) {
+                    window.selectServer(window.userServers[0]);
+                } else {
+                    window.promptJoinServerOnboard();
+                }
+            } catch(e) {
+                console.error("Error loading servers:", e);
+                loadDefaultServers();
+            }
+        }
+
+        async function updateCloudUserServers() {
+            if (!window.db || !window.currentUsername) return;
+            try {
+                const cleanUserKey = window.currentUsername.toLowerCase().replace(/[^a-z0-9_]/g, '');
+                const userRef = doc(window.db, 'artifacts', getAppId(), 'public', 'data', 'registered_users', cleanUserKey);
+                await setDoc(userRef, { servers: window.userServers }, { merge: true });
+            } catch(e) {
+                console.error("Cloud server update error:", e);
+            }
+        }
+
+        window.handleSignup = async function(e) {
+            if (e && e.preventDefault) e.preventDefault();
+
+            const usernameInput = document.getElementById('signupUsernameInput');
+            const passwordInput = document.getElementById('signupPasswordInput');
+            const username = usernameInput ? usernameInput.value.trim() : '';
+            const password = passwordInput ? passwordInput.value : '';
+
+            if (!username || !password) {
+                showAuthError("Please provide both a username and password.");
+                return;
+            }
+
+            const cleanUserKey = username.toLowerCase().replace(/[^a-z0-9_]/g, '');
+            if (!cleanUserKey) {
+                showAuthError("Username can only contain letters, numbers, and underscores.");
+                return;
+            }
+
+            window.currentUsername = username;
+            window.currentUserAvatar = window.pendingAvatarBase64 || '';
+            
+            try {
+                localStorage.setItem('protocord_saved_profile', JSON.stringify({
+                    username: window.currentUsername,
+                    avatar: window.currentUserAvatar
+                }));
+            } catch(err){}
+
+            window.updateUserUI();
+            window.hideProfileModal();
+
+            if (window.db) {
+                const userDocRef = doc(window.db, 'artifacts', getAppId(), 'public', 'data', 'registered_users', cleanUserKey);
+                const accountData = {
+                    username: username,
+                    password: password,
+                    avatar: window.pendingAvatarBase64 || '',
+                    servers: ['test_server'],
+                    createdAt: Date.now()
+                };
+
+                setDoc(userDocRef, accountData, { merge: true }).catch(err => console.warn("Background cloud sync warning:", err));
+
+                if (window.deviceFingerprint) {
+                    const deviceDocRef = doc(window.db, 'artifacts', getAppId(), 'public', 'data', 'device_profiles', window.deviceFingerprint);
+                    setDoc(deviceDocRef, {
+                        username: username,
+                        avatar: window.pendingAvatarBase64 || '',
+                        deviceId: window.localDeviceId || 'dev_local',
+                        fingerprint: window.deviceFingerprint,
+                        updatedAt: Date.now()
+                    }, { merge: true }).catch(err => console.warn("Device sync warning:", err));
+                }
+            }
+
+            loadUserServers();
+        };
+
+        window.handleLogin = async function(e) {
+            if (e && e.preventDefault) e.preventDefault();
+
+            const usernameInput = document.getElementById('loginUsernameInput');
+            const passwordInput = document.getElementById('loginPasswordInput');
+            const username = usernameInput ? usernameInput.value.trim() : '';
+            const password = passwordInput ? passwordInput.value : '';
+
+            if (!username || !password) {
+                showAuthError("Please enter your username and password.");
+                return;
+            }
+
+            const cleanUserKey = username.toLowerCase().replace(/[^a-z0-9_]/g, '');
+
+            if (window.db) {
+                try {
+                    const userDocRef = doc(window.db, 'artifacts', getAppId(), 'public', 'data', 'registered_users', cleanUserKey);
+                    let userSnap = null;
+                    
+                    try {
+                        userSnap = await getDoc(userDocRef);
+                    } catch(netErr) {
+                        console.warn("Could not fetch login profile online, using local session:", netErr);
+                    }
+
+                    if (userSnap && userSnap.exists()) {
+                        const userData = userSnap.data();
+                        if (userData.password !== password) {
+                            showAuthError("Incorrect password! Please try again.");
+                            return;
+                        }
+
+                        window.currentUsername = userData.username || username;
+                        window.currentUserAvatar = userData.avatar || '';
+                        window.pendingAvatarBase64 = window.currentUserAvatar;
+                        window.userServers = userData.servers || ['test_server'];
+                    } else {
+                        window.currentUsername = username;
+                        window.currentUserAvatar = window.pendingAvatarBase64 || '';
+                        window.userServers = ['test_server'];
+                    }
+
+                    const deviceDocRef = doc(window.db, 'artifacts', getAppId(), 'public', 'data', 'device_profiles', window.deviceFingerprint);
+                    setDoc(deviceDocRef, {
+                        username: window.currentUsername,
+                        avatar: window.currentUserAvatar,
+                        deviceId: window.localDeviceId,
+                        fingerprint: window.deviceFingerprint,
+                        updatedAt: Date.now()
+                    }).catch(err => console.warn("Background device sync warning:", err));
+                } catch(err) {
+                    console.error("Login verify error handled:", err);
+                    window.currentUsername = username;
+                }
+            } else {
+                window.currentUsername = username;
+            }
+
+            try {
+                localStorage.setItem('protocord_saved_profile', JSON.stringify({
+                    username: window.currentUsername,
+                    avatar: window.currentUserAvatar
+                }));
+            } catch(err){}
+
+            window.updateUserUI();
+            window.hideProfileModal();
+            loadUserServers();
+        };
+
+        function subscribeToChannel(serverId, channel) {
+            const container = document.getElementById('messagesContainer');
+            if (!container) return;
+
+            if (!window.db || !serverId) {
+                container.innerHTML = '<div class="text-center text-discord-yellow py-6 text-sm">Connecting to live network...</div>';
+                return;
+            }
+
+            try {
+                const q = query(collection(window.db, 'artifacts', getAppId(), 'public', 'data', 'servers', serverId, 'channels', channel, 'messages'));
+                window.unsubscribeMessages = onSnapshot(q, (snapshot) => {
+                    const msgs = [];
+                    snapshot.forEach(docSnap => {
+                        msgs.push({ id: docSnap.id, ...docSnap.data() });
+                    });
+
+                    msgs.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+                    window.renderMessages(msgs);
+                }, (err) => {
+                    console.error("Firestore error:", err);
+                    container.innerHTML = '<div class="text-center text-discord-red py-6 text-sm">Error syncing channel messages.</div>';
+                });
+            } catch(err) {
+                console.error("Subscription error:", err);
+            }
+        }
+
+        window.sendMessage = async function(text) {
+            if (!text || !text.trim()) return;
+            if (!window.db || !window.currentServerId) return;
+
+            const payload = {
+                text: text.trim(),
+                username: window.currentUsername || 'Guest',
+                avatar: window.currentUserAvatar || '',
+                deviceId: window.localDeviceId,
+                fingerprint: window.deviceFingerprint,
+                timestamp: Date.now()
+            };
+
+            try {
+                await addDoc(collection(window.db, 'artifacts', getAppId(), 'public', 'data', 'servers', window.currentServerId, 'channels', window.currentChannel, 'messages'), payload);
+            } catch(e) {
+                console.error("Message send error:", e);
+            }
+        };
+
+        async function initFirebase() {
+            try {
+                const firebaseConfig = typeof __firebaseConfig !== 'undefined' ? __firebaseConfig : {
+                    apiKey: "AIzaSyDummyKeyForSandboxUsageOnly",
+                    authDomain: "protocord-app.firebaseapp.com",
+                    projectId: "protocord-app",
+                    storageBucket: "protocord-app.appspot.com",
+                    messagingSenderId: "1234567890",
+                    appId: "1:1234567890:web:abcdef123456"
+                };
+
+                window.firebaseApp = initializeApp(firebaseConfig);
+                window.auth = getAuth(window.firebaseApp);
+                window.db = getFirestore(window.firebaseApp);
+
+                try {
+                    await signInAnonymously(window.auth);
+                } catch(e) {
+                    console.log("Anonymous sign-in skipped or using token auth");
+                }
+
+                let localDevId = localStorage.getItem('protocord_device_id');
+                if (!localDevId) {
+                    localDevId = 'dev_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+                    localStorage.setItem('protocord_device_id', localDevId);
+                }
+                window.localDeviceId = localDevId;
+                window.deviceFingerprint = 'fp_' + (navigator.userAgent.length + window.screen.width + window.screen.height + localDevId);
+
+                const savedProfile = localStorage.getItem('protocord_saved_profile');
+                if (savedProfile) {
+                    try {
+                        const parsed = JSON.parse(savedProfile);
+                        window.currentUsername = parsed.username || '';
+                        window.currentUserAvatar = parsed.avatar || '';
+                        window.pendingAvatarBase64 = window.currentUserAvatar;
+                        window.updateUserUI();
+                        window.hideProfileModal();
+                    } catch(e) {
+                        window.promptEditProfile(false);
+                    }
+                } else {
+                    window.promptEditProfile(false);
+                }
+
+                await loadUserServers();
+            } catch(err) {
+                console.error("Firebase init error:", err);
+                loadDefaultServers();
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initFirebase();
+
+            const inputEl = document.getElementById('chatInput');
+            if (inputEl) {
+                inputEl.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        window.handleSendBtn();
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
